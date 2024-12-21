@@ -3,30 +3,48 @@ import ReactFlow, { Background } from 'reactflow';
 import 'reactflow/dist/style.css';
 import * as yaml from 'js-yaml';
 
+// Define BusEvent class
+class BusEvent {
+    fileURL: string;
+    fileVal: string;
+
+    constructor(fileURL: string, fileVal: string) {
+        this.fileURL = fileURL;
+        this.fileVal = fileVal;
+    }
+}
+
+const customTags = [
+    '!PythonFunction',
+    '!BasicStage',
+    '!MonitoringService',
+    '!GenericPipeline',
+    '!FilePath',
+    '!path',
+    '!NgrokService',
+    '!ForEach',
+    '!If',
+    '!ExpressionEval',
+    '!MultiLine',
+];
+
+const customSchema = yaml.DEFAULT_SCHEMA.extend(
+    customTags.map(tag =>
+        new yaml.Type(tag, {
+            kind: 'mapping',
+            construct: data => data,
+        })
+    )
+);
+
 const parseYamlToGraph = (yamlInput: string) => {
     const nodes: any[] = [];
     const edges: any[] = [];
     const anchors: Record<string, string> = {};
 
     try {
-        const customSchema = yaml.DEFAULT_SCHEMA.extend([
-            new yaml.Type('!path', {
-                kind: 'mapping',
-                construct: (data) => {
-                    return { path: data.path, files: data.files || [] };
-                },
-            }),
-            new yaml.Type('!Stage', {
-                kind: 'mapping',
-                construct: (data) => {
-                    return { name: data.name, params: data.params, outputs: data.outputs, script: data.script };
-                },
-            }),
-        ]);
-
         const parsed = yaml.load(yamlInput, { schema: customSchema }) as Record<string, any>;
 
-        // Traverse logic remains the same
         const traverse = (
             obj: any,
             parentId: string | null,
@@ -99,35 +117,34 @@ const App = () => {
     const [nodes, setNodes] = useState<any[]>([]);
     const [edges, setEdges] = useState<any[]>([]);
 
-    // Expose API
+    // Function to process BusEvent and render the graph
+    const handleBusEvent = (event: BusEvent) => {
+        try {
+            const { fileVal } = event;
+            const { nodes, edges } = parseYamlToGraph(fileVal);
+            setNodes(nodes);
+            setEdges(edges);
+        } catch (error) {
+            console.error('Error processing BusEvent:', error);
+        }
+    };
+
     useEffect(() => {
+        // Expose setCode and handleBusEvent via a global API
         const visualizerApi = {
             setCode: (code: string) => {
                 const { nodes, edges } = parseYamlToGraph(code);
                 setNodes(nodes);
                 setEdges(edges);
             },
+            processBusEvent: (event: BusEvent) => {
+                handleBusEvent(event);
+            },
         };
 
-        // Expose the API globally
         if (typeof window !== 'undefined') {
             (window as any).visualizer = visualizerApi;
         }
-
-        // Expose for Node.js or other environments
-        if (typeof globalThis !== 'undefined') {
-            (globalThis as any).visualizer = visualizerApi;
-        }
-
-        // Cleanup (optional, especially for Hot Module Replacement)
-        return () => {
-            if (typeof window !== 'undefined') {
-                delete (window as any).visualizer;
-            }
-            if (typeof globalThis !== 'undefined') {
-                delete (globalThis as any).visualizer;
-            }
-        };
     }, []);
 
     return (
