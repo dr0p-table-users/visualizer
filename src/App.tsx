@@ -116,6 +116,7 @@ const parseYamlToGraph = (yamlInput: string) => {
 const App = () => {
     const [nodes, setNodes] = useState<any[]>([]);
     const [edges, setEdges] = useState<any[]>([]);
+    const [yamlInput, setYamlInput] = useState<string>('');
 
     // Function to process BusEvent and render the graph
     const handleBusEvent = (event: BusEvent) => {
@@ -147,13 +148,39 @@ const App = () => {
         }
     }, []);
 
+    const handleYamlChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+        setYamlInput(e.target.value);
+    };
+
+    const handleRenderClick = () => {
+        const { nodes, edges } = parseYamlToGraph(yamlInput);
+        setNodes(nodes);
+        setEdges(edges);
+    };
+
+    
     return (
-        <div style={{ height: '100vh' }}>
-            <ReactFlow nodes={nodes} edges={edges}>
-                <Background />
-            </ReactFlow>
+        <div style={{ display: 'flex', height: '100vh' }}>
+            <div style={{ width: '30%', padding: '10px', boxSizing: 'border-box' }}>
+                <textarea
+                    value={yamlInput}
+                    onChange={handleYamlChange}
+                    placeholder="Paste your YAML here..."
+                    style={{ width: '100%', height: '80%', fontSize: '14px', fontFamily: 'monospace' }}
+                />
+                <button onClick={handleRenderClick} style={{ width: '100%', marginTop: '10px' }}>
+                    Render Graph
+                </button>
+            </div>
+            <div style={{ flexGrow: 1 }}>
+                <ReactFlow nodes={nodes} edges={edges}>
+                    <Background />
+                </ReactFlow>
+            </div>
         </div>
     );
+    
+
 };
 
 export default App;
